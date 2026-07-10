@@ -1,0 +1,286 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { complaintCategoryOptions, complaintPriorityOptions, complaintStatusOptions } from "@/lib/constants";
+
+type ComplaintRow = {
+  id: string;
+  category: string;
+  description: string;
+  priority: string;
+  status: string;
+  createdAt: string;
+  resident: {
+    name: string;
+    email: string;
+  };
+  historyCount: number;
+  overdue: boolean;
+};
+
+type ComplaintHistoryItem = {
+  id: string;
+  previousStatus: string | null;
+  newStatus: string;
+  actorName: string;
+  note: string | null;
+  timestamp: string;
+};
+
+type Props = {
+  complaints: ComplaintRow[];
+};
+
+export function AdminComplaintsClient({ complaints }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
+  const [status, setStatus] = useState("OPEN");
+  const [priority, setPriority] = useState("MEDIUM");
+  const [note, setNote] = useState("");
+  const [history, setHistory] = useState<ComplaintHistoryItem[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const selectedComplaint = useMemo(
+    () => complaints.find((complaint) => complaint.id === selectedComplaintId) ?? null,
+    [complaints, selectedComplaintId]
+  );
+
+  async function openComplaint(complaint: ComplaintRow) {
+    setSelectedComplaintId(complaint.id);
+    setStatus(complaint.status);
+    setPriority(complaint.priority);
+    setLoadingHistory(true);
+
+    try {
+      const response = await fetch(`/api/admin/complaints/${complaint.id}`);
+      const data = (await response.json()) as {
+        complaint?: { history?: ComplaintHistoryItem[] };
+      };
+      setHistory(data.complaint?.history ?? []);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  async function updateComplaint() {
+    if (!selectedComplaintId) return;
+
+    await fetch(`/api/admin/complaints/${selectedComplaintId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, priority, note }),
+    });
+
+    setNote("");
+    setSelectedComplaintId(null);
+    setHistory([]);
+    router.refresh();
+  }
+
+  const filters = {
+    status: searchParams.get("status") ?? "",
+    category: searchParams.get("category") ?? "",
+    priority: searchParams.get("priority") ?? "",
+    search: searchParams.get("search") ?? "",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 rounded-xl border bg-card p-4 md:grid-cols-4">
+        <Input
+          placeholder="Search complaints"
+          defaultValue={filters.search}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              const value = (event.currentTarget as HTMLInputElement).value;
+              const url = new URL(window.location.href);
+              if (value) url.searchParams.set("search", value);
+              else url.searchParams.delete("search");
+              window.location.href = url.toString();
+            }
+          }}
+        />
+        <Select
+          defaultValue={filters.status}
+          onChange={(event) => {
+            const url = new URL(window.location.href);
+            if (event.target.value) url.searchParams.set("status", event.target.value);
+            else url.searchParams.delete("status");
+            window.location.href = url.toString();
+          }}
+        >
+          <option value="">All Statuses</option>
+          {complaintStatusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          defaultValue={filters.category}
+          onChange={(event) => {
+            const url = new URL(window.location.href);
+            if (event.target.value) url.searchParams.set("category", event.target.value);
+            else url.searchParams.delete("category");
+            window.location.href = url.toString();
+          }}
+        >
+          <option value="">All Categories</option>
+          {complaintCategoryOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+        <Select
+          defaultValue={filters.priority}
+          onChange={(event) => {
+            const url = new URL(window.location.href);
+            if (event.target.value) url.searchParams.set("priority", event.target.value);
+            else url.searchParams.delete("priority");
+            window.location.href = url.toString();
+          }}
+        >
+          <option value="">All Priorities</option>
+          {complaintPriorityOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/40 text-left">
+            <tr>
+              <th className="px-4 py-3">Resident</th>
+              <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Priority</th>
+              <th className="px-4 py-3">Overdue</th>
+              <th className="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {complaints.length === 0 ? (
+              <tr>
+                <td className="px-4 py-10 text-center text-muted-foreground" colSpan={6}>
+                  No complaints match these filters.
+                </td>
+              </tr>
+            ) : (
+              complaints.map((complaint) => (
+                <tr key={complaint.id} className="border-b last:border-0">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{complaint.resident.name}</div>
+                    <div className="text-xs text-muted-foreground">{complaint.resident.email}</div>
+                  </td>
+                  <td className="px-4 py-3">{complaint.category}</td>
+                  <td className="px-4 py-3">{complaint.status}</td>
+                  <td className="px-4 py-3">{complaint.priority}</td>
+                  <td className="px-4 py-3">{complaint.overdue ? "Yes" : "No"}</td>
+                  <td className="px-4 py-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        void openComplaint(complaint);
+                      }}
+                    >
+                      Update
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedComplaint ? (
+        <Card className="border-border/70">
+          <CardContent className="space-y-4 p-6">
+            <div>
+              <h3 className="text-lg font-semibold">Update complaint</h3>
+              <p className="text-sm text-muted-foreground">
+                Editing complaint from {selectedComplaint.resident.name}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+              <div className="font-medium">{selectedComplaint.description}</div>
+              <div className="mt-1 text-muted-foreground">
+                Created at {new Date(selectedComplaint.createdAt).toLocaleString()} - Overdue{" "}
+                {selectedComplaint.overdue ? "Yes" : "No"}
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-2">
+                <Label>Status</Label>
+                <Select value={status} onChange={(event) => setStatus(event.target.value)}>
+                  {complaintStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Priority</Label>
+                <Select value={priority} onChange={(event) => setPriority(event.target.value)}>
+                  {complaintPriorityOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Note</Label>
+                <Textarea value={note} onChange={(event) => setNote(event.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={updateComplaint}>Save changes</Button>
+              <Button variant="outline" onClick={() => setSelectedComplaintId(null)}>
+                Cancel
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Complaint history
+              </h4>
+              {loadingHistory ? (
+                <p className="text-sm text-muted-foreground">Loading history...</p>
+              ) : history.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No history entries yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {history.map((entry) => (
+                    <div key={entry.id} className="rounded-lg border px-4 py-3 text-sm">
+                      <div className="font-medium">
+                        {entry.previousStatus ?? "Created"} -> {entry.newStatus}
+                      </div>
+                      <div className="text-muted-foreground">
+                        By {entry.actorName} on {new Date(entry.timestamp).toLocaleString()}
+                      </div>
+                      {entry.note ? <div className="mt-1">{entry.note}</div> : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}

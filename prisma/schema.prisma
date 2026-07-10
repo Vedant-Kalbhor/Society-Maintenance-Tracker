@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  RESIDENT
+  ADMIN
+}
+
+enum ComplaintCategory {
+  ELECTRICAL
+  PLUMBING
+  CLEANING
+  SECURITY
+  PARKING
+  OTHER
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  password     String
+  role         Role        @default(RESIDENT)
+  complaints   Complaint[] @relation("ResidentComplaints")
+  createdNotices Notice[]   @relation("CreatedNotices")
+  histories    ComplaintHistory[] @relation("HistoryActor")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model Complaint {
+  id           String             @id @default(cuid())
+  residentId   String
+  resident     User               @relation("ResidentComplaints", fields: [residentId], references: [id], onDelete: Cascade)
+  category     ComplaintCategory
+  description  String
+  photoUrl     String?
+  priority     ComplaintPriority  @default(MEDIUM)
+  status       ComplaintStatus    @default(OPEN)
+  isClosed     Boolean            @default(false)
+  resolvedAt   DateTime?
+  closedAt     DateTime?
+  history      ComplaintHistory[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([residentId])
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([isClosed])
+}
+
+model ComplaintHistory {
+  id              String           @id @default(cuid())
+  complaintId     String
+  complaint       Complaint        @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  previousStatus  ComplaintStatus?
+  newStatus       ComplaintStatus
+  actorId         String?
+  actor           User?            @relation("HistoryActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorName       String
+  note            String?
+  timestamp       DateTime         @default(now())
+
+  @@index([complaintId])
+  @@index([timestamp])
+  @@index([newStatus])
+}
+
+model Notice {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  isImportant  Boolean  @default(false)
+  isPinned     Boolean  @default(false)
+  createdById  String
+  createdBy    User     @relation("CreatedNotices", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isImportant])
+  @@index([isPinned])
+  @@index([createdAt])
+}
+
+model Config {
+  id          String   @id @default(cuid())
+  overdueDays Int      @default(7)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
