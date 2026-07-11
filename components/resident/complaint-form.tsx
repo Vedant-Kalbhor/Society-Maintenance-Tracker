@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,7 +18,10 @@ type ComplaintFormProps = {
 
 export function ComplaintForm({ residentId }: ComplaintFormProps) {
   const router = useRouter();
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>("");
   const {
     register,
     handleSubmit,
@@ -37,10 +40,33 @@ export function ComplaintForm({ residentId }: ComplaintFormProps) {
   const onSubmit = handleSubmit(async (values) => {
     setIsSubmitting(true);
     try {
+      let photoUrl = values.photoUrl;
+
+      if (photoFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", photoFile);
+
+        const uploadResponse = await fetch("/api/uploads/photo", {
+          method: "POST",
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload photo");
+        }
+
+        const uploadData = (await uploadResponse.json()) as { url: string };
+        photoUrl = uploadData.url;
+        setUploadedPhotoUrl(uploadData.url);
+      }
+
       const response = await fetch("/api/complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          ...values,
+          photoUrl,
+        }),
       });
 
       if (!response.ok) {
@@ -53,6 +79,11 @@ export function ComplaintForm({ residentId }: ComplaintFormProps) {
         photoUrl: "",
         priority: "MEDIUM",
       });
+      setPhotoFile(null);
+      setUploadedPhotoUrl("");
+      if (photoInputRef.current) {
+        photoInputRef.current.value = "";
+      }
       router.refresh();
     } finally {
       setIsSubmitting(false);
@@ -105,9 +136,21 @@ export function ComplaintForm({ residentId }: ComplaintFormProps) {
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="photoUrl">Optional photo URL</Label>
-        <Input id="photoUrl" placeholder="https://..." {...register("photoUrl")} />
-        <p className="text-xs text-muted-foreground">Phase 7 will replace this with Cloudinary upload.</p>
+        <Label htmlFor="photo">Optional photo</Label>
+        <Input
+          ref={photoInputRef}
+          id="photo"
+          type="file"
+          accept="image/*"
+          onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+        />
+        <input type="hidden" {...register("photoUrl")} />
+        <p className="text-xs text-muted-foreground">
+          Images are uploaded to Cloudinary and the URL is stored in the complaint record.
+        </p>
+        {uploadedPhotoUrl ? (
+          <p className="text-xs text-muted-foreground break-all">{uploadedPhotoUrl}</p>
+        ) : null}
       </div>
 
       <Button type="submit" disabled={isSubmitting}>

@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { isOverdueComplaint } from "@/lib/complaints";
 import { AdminNoticeForm } from "@/components/admin/admin-notice-form";
 import { AdminThresholdForm } from "@/components/admin/admin-threshold-form";
+import { AdminAnalyticsPanel } from "@/components/admin/admin-analytics-panel";
+import { buildAnalyticsSummary } from "@/lib/analytics";
+import { complaintCategoryLabels, complaintStatusLabels } from "@/lib/constants";
 
 export default async function AdminDashboardPage() {
   const session = await auth();
@@ -14,17 +17,23 @@ export default async function AdminDashboardPage() {
   }
 
   const config = (await prisma.config.findFirst()) ?? (await prisma.config.create({ data: {} }));
-  const [complaints, byStatus, byCategory, totalUsers] = await Promise.all([
+  const [complaints, totalUsers] = await Promise.all([
     prisma.complaint.findMany({
       include: { resident: { select: { name: true, email: true } }, history: true },
       orderBy: [{ createdAt: "desc" }],
     }),
-    prisma.complaint.groupBy({ by: ["status"], _count: { id: true } }),
-    prisma.complaint.groupBy({ by: ["category"], _count: { id: true } }),
     prisma.user.count({ where: { role: "RESIDENT" } }),
   ]);
 
+  const analytics = buildAnalyticsSummary(complaints, config.overdueDays);
   const overdueCount = complaints.filter((complaint) => isOverdueComplaint(complaint, config.overdueDays)).length;
+
+  const statusCounts = Object.fromEntries(
+    analytics.statusData.map((entry) => [entry.name, entry.value])
+  );
+  const categoryCounts = Object.fromEntries(
+    analytics.categoryData.map((entry) => [entry.name, entry.value])
+  );
 
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-8 px-6 py-8">
@@ -55,6 +64,8 @@ export default async function AdminDashboardPage() {
         </Card>
       </section>
 
+      <AdminAnalyticsPanel analytics={analytics} />
+
       <section className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -62,10 +73,10 @@ export default async function AdminDashboardPage() {
             <CardDescription>Summary of current complaint states.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {byStatus.map((item) => (
-              <div key={item.status} className="flex items-center justify-between rounded-lg border px-4 py-3">
-                <span>{item.status}</span>
-                <span className="font-semibold">{item._count.id}</span>
+            {Object.entries(complaintStatusLabels).map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <span>{label}</span>
+                <span className="font-semibold">{statusCounts[label] ?? 0}</span>
               </div>
             ))}
           </CardContent>
@@ -77,10 +88,10 @@ export default async function AdminDashboardPage() {
             <CardDescription>Where the requests are coming from.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {byCategory.map((item) => (
-              <div key={item.category} className="flex items-center justify-between rounded-lg border px-4 py-3">
-                <span>{item.category}</span>
-                <span className="font-semibold">{item._count.id}</span>
+            {Object.entries(complaintCategoryLabels).map(([key, label]) => (
+              <div key={key} className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <span>{label}</span>
+                <span className="font-semibold">{categoryCounts[label] ?? 0}</span>
               </div>
             ))}
           </CardContent>

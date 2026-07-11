@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { sendEmail } from "@/lib/resend";
 
 const noticeSchema = z.object({
   title: z.string().trim().min(3),
@@ -33,6 +34,29 @@ export async function POST(request: Request) {
       createdById: session.user.id,
     },
   });
+
+  if (notice.isImportant) {
+    const residents = await prisma.user.findMany({
+      where: { role: Role.RESIDENT },
+      select: { email: true },
+    });
+
+    const emails = residents.map((resident) => resident.email);
+    if (emails.length > 0) {
+      void sendEmail({
+        to: emails,
+        subject: `Important notice: ${notice.title}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+            <h2>${notice.title}</h2>
+            <p>${notice.description}</p>
+          </div>
+        `,
+      }).catch((error) => {
+        console.error("Failed to send important notice email:", error);
+      });
+    }
+  }
 
   return NextResponse.json({ notice }, { status: 201 });
 }

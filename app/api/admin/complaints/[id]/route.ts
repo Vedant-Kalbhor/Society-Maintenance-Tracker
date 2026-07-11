@@ -5,6 +5,8 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createComplaintHistoryEntry } from "@/lib/complaints";
 import { prisma } from "@/lib/prisma";
+import { sendEmail } from "@/lib/resend";
+import { complaintStatusLabels } from "@/lib/constants";
 
 const complaintAdminUpdateSchema = z.object({
   status: z.nativeEnum(ComplaintStatus).optional(),
@@ -35,6 +37,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!complaint) {
     return NextResponse.json({ message: "Complaint not found" }, { status: 404 });
   }
+
+  const complaintWithResident = await prisma.complaint.findUnique({
+    where: { id },
+    include: {
+      resident: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
 
   const { status, priority, note } = parsed.data;
 
@@ -87,6 +101,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     return nextComplaint;
   });
+
+  if (status && status !== complaint.status && complaintWithResident?.resident.email) {
+    void sendEmail({
+      to: complaintWithResident.resident.email,
+      subject: `Complaint ${complaintWithResident.id} status updated`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>Your complaint status has changed</h2>
+          <p><strong>Complaint ID:</strong> ${complaintWithResident.id}</p>
+          <p><strong>New Status:</strong> ${complaintStatusLabels[updatedComplaint.status]}</p>
+          <p><strong>Category:</strong> ${complaintWithResident.category}</p>
+          <p><strong>Description:</strong> ${complaintWithResident.description}</p>
+        </div>
+      `,
+    }).catch((error) => {
+      console.error("Failed to send complaint status email:", error);
+    });
+  }
 
   return NextResponse.json({ complaint: updatedComplaint });
 }

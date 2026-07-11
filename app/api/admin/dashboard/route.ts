@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
+import { buildAnalyticsSummary } from "@/lib/analytics";
 import { prisma } from "@/lib/prisma";
-import { isOverdueComplaint } from "@/lib/complaints";
 
 export async function GET() {
   const session = await auth();
@@ -13,16 +13,15 @@ export async function GET() {
 
   const config = (await prisma.config.findFirst()) ?? (await prisma.config.create({ data: {} }));
   const complaints = await prisma.complaint.findMany();
-  const overdueCount = complaints.filter((complaint) => isOverdueComplaint(complaint, config.overdueDays)).length;
-
-  const byStatus = await prisma.complaint.groupBy({ by: ["status"], _count: { id: true } });
-  const byCategory = await prisma.complaint.groupBy({ by: ["category"], _count: { id: true } });
+  const analytics = buildAnalyticsSummary(complaints, config.overdueDays);
 
   return NextResponse.json({
-    totalComplaints: complaints.length,
-    overdueCount,
+    totalComplaints: analytics.totalComplaints,
+    overdueCount: analytics.overdueCount,
     overdueDays: config.overdueDays,
-    byStatus,
-    byCategory,
+    statusData: analytics.statusData,
+    categoryData: analytics.categoryData,
+    priorityData: analytics.priorityData,
+    trendData: analytics.trendData,
   });
 }
