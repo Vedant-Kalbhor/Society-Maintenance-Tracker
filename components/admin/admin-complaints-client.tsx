@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +42,7 @@ type Props = {
 
 export function AdminComplaintsClient({ complaints }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
   const [status, setStatus] = useState("OPEN");
@@ -74,16 +76,39 @@ export function AdminComplaintsClient({ complaints }: Props) {
   async function updateComplaint() {
     if (!selectedComplaintId) return;
 
-    await fetch(`/api/admin/complaints/${selectedComplaintId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, priority, note }),
-    });
+    try {
+      const response = await fetch(`/api/admin/complaints/${selectedComplaintId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, priority, note }),
+      });
 
-    setNote("");
-    setSelectedComplaintId(null);
-    setHistory([]);
-    router.refresh();
+      if (!response.ok) {
+        throw new Error("Failed to update complaint");
+      }
+
+      toast.success("Complaint updated");
+      setNote("");
+      setSelectedComplaintId(null);
+      setHistory([]);
+      router.refresh();
+    } catch {
+      toast.error("Unable to update complaint");
+    }
+  }
+
+  function updateQuery(next: Record<string, string | undefined>) {
+    const url = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(next)) {
+      if (value) {
+        url.set(key, value);
+      } else {
+        url.delete(key);
+      }
+    }
+
+    const queryString = url.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname);
   }
 
   const filters = {
@@ -102,20 +127,14 @@ export function AdminComplaintsClient({ complaints }: Props) {
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               const value = (event.currentTarget as HTMLInputElement).value;
-              const url = new URL(window.location.href);
-              if (value) url.searchParams.set("search", value);
-              else url.searchParams.delete("search");
-              window.location.href = url.toString();
+              updateQuery({ search: value || undefined });
             }
           }}
         />
         <Select
           defaultValue={filters.status}
           onChange={(event) => {
-            const url = new URL(window.location.href);
-            if (event.target.value) url.searchParams.set("status", event.target.value);
-            else url.searchParams.delete("status");
-            window.location.href = url.toString();
+            updateQuery({ status: event.target.value || undefined });
           }}
         >
           <option value="">All Statuses</option>
@@ -128,10 +147,7 @@ export function AdminComplaintsClient({ complaints }: Props) {
         <Select
           defaultValue={filters.category}
           onChange={(event) => {
-            const url = new URL(window.location.href);
-            if (event.target.value) url.searchParams.set("category", event.target.value);
-            else url.searchParams.delete("category");
-            window.location.href = url.toString();
+            updateQuery({ category: event.target.value || undefined });
           }}
         >
           <option value="">All Categories</option>
@@ -144,10 +160,7 @@ export function AdminComplaintsClient({ complaints }: Props) {
         <Select
           defaultValue={filters.priority}
           onChange={(event) => {
-            const url = new URL(window.location.href);
-            if (event.target.value) url.searchParams.set("priority", event.target.value);
-            else url.searchParams.delete("priority");
-            window.location.href = url.toString();
+            updateQuery({ priority: event.target.value || undefined });
           }}
         >
           <option value="">All Priorities</option>
@@ -192,6 +205,7 @@ export function AdminComplaintsClient({ complaints }: Props) {
                   <td className="px-4 py-3">
                     <Button
                       variant="outline"
+                      type="button"
                       onClick={() => {
                         void openComplaint(complaint);
                       }}
@@ -249,8 +263,10 @@ export function AdminComplaintsClient({ complaints }: Props) {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button onClick={updateComplaint}>Save changes</Button>
-              <Button variant="outline" onClick={() => setSelectedComplaintId(null)}>
+              <Button type="button" onClick={updateComplaint}>
+                Save changes
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setSelectedComplaintId(null)}>
                 Cancel
               </Button>
             </div>

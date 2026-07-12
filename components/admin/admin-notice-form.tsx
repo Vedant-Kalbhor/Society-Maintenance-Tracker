@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,16 +19,26 @@ export function AdminNoticeForm() {
   const [isPinned, setIsPinned] = useState(false);
 
   async function submit() {
-    await fetch("/api/admin/notices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, description, isImportant, isPinned }),
-    });
-    setTitle("");
-    setDescription("");
-    setIsImportant(false);
-    setIsPinned(false);
-    router.refresh();
+    try {
+      const response = await fetch("/api/admin/notices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description, isImportant, isPinned }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to publish notice");
+      }
+
+      toast.success("Notice published");
+      setTitle("");
+      setDescription("");
+      setIsImportant(false);
+      setIsPinned(false);
+      router.refresh();
+    } catch {
+      toast.error("Unable to publish notice");
+    }
   }
 
   return (
@@ -63,7 +74,9 @@ export function AdminNoticeForm() {
             </div>
           </div>
         </div>
-        <Button onClick={submit}>Publish notice</Button>
+        <Button type="button" onClick={submit}>
+          Publish notice
+        </Button>
       </CardContent>
     </Card>
   );

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,7 +85,10 @@ export function ComplaintForm({ residentId }: ComplaintFormProps) {
       if (photoInputRef.current) {
         photoInputRef.current.value = "";
       }
+      toast.success("Complaint submitted successfully");
       router.refresh();
+    } catch {
+      toast.error("Unable to submit complaint. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

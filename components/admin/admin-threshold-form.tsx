@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,13 +19,22 @@ export function AdminThresholdForm({ overdueDays }: Props) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    await fetch("/api/admin/config", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ overdueDays: Number(value) }),
-    });
+    try {
+      const response = await fetch("/api/admin/config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ overdueDays: Number(value) }),
+      });
 
-    router.refresh();
+      if (!response.ok) {
+        throw new Error("Failed to update threshold");
+      }
+
+      toast.success("Overdue threshold updated");
+      router.refresh();
+    } catch {
+      toast.error("Unable to update overdue threshold");
+    }
   }
 
   return (
