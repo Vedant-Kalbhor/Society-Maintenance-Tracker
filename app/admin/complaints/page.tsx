@@ -30,6 +30,8 @@ export default async function AdminComplaintsPage({
     typeof resolvedSearchParams.category === "string" ? resolvedSearchParams.category : undefined;
   const priority =
     typeof resolvedSearchParams.priority === "string" ? resolvedSearchParams.priority : undefined;
+  const date =
+    typeof resolvedSearchParams.date === "string" ? resolvedSearchParams.date : undefined;
   const search =
     typeof resolvedSearchParams.search === "string" ? resolvedSearchParams.search : undefined;
 
@@ -38,6 +40,7 @@ export default async function AdminComplaintsPage({
       if (status && complaint.status !== status) return false;
       if (category && complaint.category !== category) return false;
       if (priority && complaint.priority !== priority) return false;
+      if (date && complaint.createdAt.toISOString().slice(0, 10) !== date) return false;
       return true;
     }),
     config.overdueDays,

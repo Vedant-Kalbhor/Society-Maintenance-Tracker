@@ -150,6 +150,7 @@ export function AdminComplaintsClient({ complaints }: Props) {
     status: searchParams.get("status") ?? "",
     category: searchParams.get("category") ?? "",
     priority: searchParams.get("priority") ?? "",
+    date: searchParams.get("date") ?? "",
     search: searchParams.get("search") ?? "",
   };
 
@@ -205,6 +206,13 @@ export function AdminComplaintsClient({ complaints }: Props) {
             </option>
           ))}
         </Select>
+        <Input
+          type="date"
+          defaultValue={filters.date}
+          onChange={(event) => {
+            updateQuery({ date: event.target.value || undefined });
+          }}
+        />
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card">

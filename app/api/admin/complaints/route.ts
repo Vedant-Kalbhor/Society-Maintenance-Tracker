@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   const status = url.searchParams.get("status") as ComplaintStatus | null;
   const category = url.searchParams.get("category");
   const priority = url.searchParams.get("priority") as ComplaintPriority | null;
+  const date = url.searchParams.get("date");
   const search = url.searchParams.get("search")?.toLowerCase();
 
   const config = (await prisma.config.findFirst()) ?? (await prisma.config.create({ data: {} }));
@@ -27,6 +28,9 @@ export async function GET(request: Request) {
     .filter((complaint) => (status ? complaint.status === status : true))
     .filter((complaint) => (category ? complaint.category === category : true))
     .filter((complaint) => (priority ? complaint.priority === priority : true))
+    .filter((complaint) =>
+      date ? complaint.createdAt.toISOString().slice(0, 10) === date : true
+    )
     .filter((complaint) =>
       search
         ? complaint.description.toLowerCase().includes(search) ||

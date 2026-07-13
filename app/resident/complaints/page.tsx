@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ComplaintTable } from "@/components/resident/complaint-table";
+import { ComplaintHistoryView } from "@/components/resident/complaint-history-view";
 
 export default async function ResidentComplaintsPage() {
   const session = await auth();
@@ -13,6 +13,11 @@ export default async function ResidentComplaintsPage() {
 
   const complaints = await prisma.complaint.findMany({
     where: { residentId: session.user.id },
+    include: {
+      history: {
+        orderBy: { timestamp: "asc" },
+      },
+    },
     orderBy: [{ createdAt: "desc" }],
   });
 
@@ -21,10 +26,20 @@ export default async function ResidentComplaintsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Complaint history</CardTitle>
-          <CardDescription>Everything you have raised so far.</CardDescription>
+          <CardDescription>Browse every complaint and its full status history.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ComplaintTable complaints={complaints} />
+          <ComplaintHistoryView
+            complaints={complaints.map((complaint) => ({
+              id: complaint.id,
+              category: complaint.category,
+              description: complaint.description,
+              photoUrl: complaint.photoUrl,
+              priority: complaint.priority,
+              status: complaint.status,
+              createdAt: complaint.createdAt.toISOString(),
+            }))}
+          />
         </CardContent>
       </Card>
     </div>
