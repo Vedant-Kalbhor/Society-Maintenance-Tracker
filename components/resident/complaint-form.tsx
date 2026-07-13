@@ -11,7 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { complaintCategoryOptions, complaintPriorityOptions } from "@/lib/constants";
-import { complaintCreateSchema, type ComplaintCreateInput } from "@/lib/validators";
+import {
+  complaintCreateSchema,
+  type ComplaintCreateFormInput,
+} from "@/lib/validators";
 
 type ComplaintFormProps = {
   residentId: string;
@@ -28,7 +31,7 @@ export function ComplaintForm({ residentId }: ComplaintFormProps) {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<ComplaintCreateInput>({
+  } = useForm<ComplaintCreateFormInput>({
     resolver: zodResolver(complaintCreateSchema),
     defaultValues: {
       category: "ELECTRICAL",

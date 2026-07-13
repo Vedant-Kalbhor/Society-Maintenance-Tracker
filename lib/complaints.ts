@@ -1,8 +1,19 @@
-import { Complaint, ComplaintStatus, Prisma } from "@prisma/client";
+import { ComplaintStatus, Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
-export function isOverdueComplaint(complaint: Complaint, overdueDays: number) {
+type ComplaintSortableFields = {
+  description: string;
+  category: string;
+  status: ComplaintStatus;
+  priority: string;
+  createdAt: Date;
+};
+
+export function isOverdueComplaint<T extends { status: ComplaintStatus; createdAt: Date }>(
+  complaint: T,
+  overdueDays: number
+) {
   if (complaint.status === ComplaintStatus.RESOLVED || complaint.status === ComplaintStatus.CLOSED) {
     return false;
   }
@@ -12,11 +23,11 @@ export function isOverdueComplaint(complaint: Complaint, overdueDays: number) {
   return ageInMs > thresholdInMs;
 }
 
-export function sortComplaintsForAdmin(
-  complaints: Complaint[],
+export function sortComplaintsForAdmin<T extends ComplaintSortableFields>(
+  complaints: T[],
   overdueDays: number,
   searchTerm?: string
-) {
+): T[] {
   const filtered = searchTerm
     ? complaints.filter((complaint) => {
         const needle = searchTerm.toLowerCase();
@@ -38,7 +49,7 @@ export function sortComplaintsForAdmin(
     }
 
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  }) as T[];
 }
 
 export async function createComplaintHistoryEntry(params: {

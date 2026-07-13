@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ComplaintCategory, ComplaintPriority, ComplaintStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,8 +9,8 @@ import { complaintCategoryLabels, complaintPriorityLabels, complaintStatusLabels
 
 type HistoryItem = {
   id: string;
-  previousStatus: string | null;
-  newStatus: string;
+  previousStatus: ComplaintStatus | null;
+  newStatus: ComplaintStatus;
   actorName: string;
   note: string | null;
   proofPhotoUrl: string | null;
@@ -18,11 +19,11 @@ type HistoryItem = {
 
 type ComplaintRow = {
   id: string;
-  category: string;
+  category: ComplaintCategory;
   description: string;
   photoUrl: string | null;
-  priority: string;
-  status: string;
+  priority: ComplaintPriority;
+  status: ComplaintStatus;
   createdAt: string;
 };
 

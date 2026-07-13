@@ -31,4 +31,5 @@ export const complaintStatusUpdateSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
-export type ComplaintCreateInput = z.infer<typeof complaintCreateSchema>;
+export type ComplaintCreateInput = z.output<typeof complaintCreateSchema>;
+export type ComplaintCreateFormInput = z.input<typeof complaintCreateSchema>;

@@ -38,7 +38,19 @@ export default function HomePage() {
         </div>
 
         <Card className="w-full max-w-xl border-border/70 bg-card/90 backdrop-blur">
-          
+          <CardHeader>
+            <CardTitle>Built for societies that need clarity</CardTitle>
+            <CardDescription>
+              Residents raise complaints, admins resolve them, and everyone sees the audit trail.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {highlights.map((item) => (
+              <div key={item} className="rounded-lg border bg-background/70 px-4 py-3 text-sm">
+                {item}
+              </div>
+            ))}
+          </CardContent>
         </Card>
       </section>
     </main>
