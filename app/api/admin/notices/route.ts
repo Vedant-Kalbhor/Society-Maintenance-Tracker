@@ -9,6 +9,10 @@ import { sendEmail } from "@/lib/resend";
 const noticeSchema = z.object({
   title: z.string().trim().min(3),
   description: z.string().trim().min(10),
+  pdfUrl: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().url().optional()
+  ),
   isImportant: z.boolean().default(false),
   isPinned: z.boolean().default(false),
 });
@@ -29,6 +33,7 @@ export async function POST(request: Request) {
     data: {
       title: parsed.data.title,
       description: parsed.data.description,
+      pdfUrl: parsed.data.pdfUrl,
       isImportant: parsed.data.isImportant,
       isPinned: parsed.data.isPinned,
       createdById: session.user.id,
@@ -50,6 +55,7 @@ export async function POST(request: Request) {
           <div style="font-family: Arial, sans-serif; line-height: 1.6;">
             <h2>${notice.title}</h2>
             <p>${notice.description}</p>
+            ${notice.pdfUrl ? `<p><a href="${notice.pdfUrl}">Download attached PDF</a></p>` : ""}
           </div>
         `,
       }).catch((error) => {

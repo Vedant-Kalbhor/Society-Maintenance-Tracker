@@ -84,6 +84,7 @@ model ComplaintHistory {
   actor           User?            @relation("HistoryActor", fields: [actorId], references: [id], onDelete: SetNull)
   actorName       String
   note            String?
+  proofPhotoUrl   String?
   timestamp       DateTime         @default(now())
 
   @@index([complaintId])
@@ -95,6 +96,7 @@ model Notice {
   id           String   @id @default(cuid())
   title        String
   description  String
+  pdfUrl       String?
   isImportant  Boolean  @default(false)
   isPinned     Boolean  @default(false)
   createdById  String

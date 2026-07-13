@@ -14,11 +14,23 @@ if (cloudName && apiKey && apiSecret) {
 }
 
 export async function uploadImageToCloudinary(buffer: Buffer, publicIdPrefix = "society-maintenance") {
+  return uploadToCloudinary(buffer, publicIdPrefix, "image");
+}
+
+export async function uploadDocumentToCloudinary(buffer: Buffer, publicIdPrefix = "society-maintenance") {
+  return uploadToCloudinary(buffer, publicIdPrefix, "raw");
+}
+
+function uploadToCloudinary(
+  buffer: Buffer,
+  publicIdPrefix: string,
+  resourceType: "image" | "raw"
+) {
   return new Promise<{ url: string; publicId: string }>((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: publicIdPrefix,
-        resource_type: "image",
+        resource_type: resourceType,
       },
       (error, result) => {
         if (error || !result) {

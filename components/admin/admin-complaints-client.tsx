@@ -1,7 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ type ComplaintHistoryItem = {
   newStatus: string;
   actorName: string;
   note: string | null;
+  proofPhotoUrl: string | null;
   timestamp: string;
 };
 
@@ -44,10 +46,13 @@ export function AdminComplaintsClient({ complaints }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const proofInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedComplaintId, setSelectedComplaintId] = useState<string | null>(null);
   const [status, setStatus] = useState("OPEN");
   const [priority, setPriority] = useState("MEDIUM");
   const [note, setNote] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadedProofUrl, setUploadedProofUrl] = useState("");
   const [history, setHistory] = useState<ComplaintHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -60,6 +65,12 @@ export function AdminComplaintsClient({ complaints }: Props) {
     setSelectedComplaintId(complaint.id);
     setStatus(complaint.status);
     setPriority(complaint.priority);
+    setNote("");
+    setProofFile(null);
+    setUploadedProofUrl("");
+    if (proofInputRef.current) {
+      proofInputRef.current.value = "";
+    }
     setLoadingHistory(true);
 
     try {
@@ -77,10 +88,29 @@ export function AdminComplaintsClient({ complaints }: Props) {
     if (!selectedComplaintId) return;
 
     try {
+      let proofPhotoUrl = uploadedProofUrl || undefined;
+      if (proofFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", proofFile);
+
+        const uploadResponse = await fetch("/api/uploads/photo", {
+          method: "POST",
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload proof photo");
+        }
+
+        const uploadData = (await uploadResponse.json()) as { url: string };
+        proofPhotoUrl = uploadData.url;
+        setUploadedProofUrl(uploadData.url);
+      }
+
       const response = await fetch(`/api/admin/complaints/${selectedComplaintId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, priority, note }),
+        body: JSON.stringify({ status, priority, note, proofPhotoUrl }),
       });
 
       if (!response.ok) {
@@ -89,6 +119,11 @@ export function AdminComplaintsClient({ complaints }: Props) {
 
       toast.success("Complaint updated");
       setNote("");
+      setProofFile(null);
+      setUploadedProofUrl("");
+      if (proofInputRef.current) {
+        proofInputRef.current.value = "";
+      }
       setSelectedComplaintId(null);
       setHistory([]);
       router.refresh();
@@ -210,7 +245,7 @@ export function AdminComplaintsClient({ complaints }: Props) {
                         void openComplaint(complaint);
                       }}
                     >
-                      Update
+                      Resolve / Update
                     </Button>
                   </td>
                 </tr>
@@ -258,15 +293,44 @@ export function AdminComplaintsClient({ complaints }: Props) {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>Note</Label>
+                <Label>Resolution note</Label>
                 <Textarea value={note} onChange={(event) => setNote(event.target.value)} />
+                <p className="text-xs text-muted-foreground">
+                  Saved with the next status update and shown in complaint history.
+                </p>
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="proofPhoto">Optional proof photo</Label>
+              <Input
+                ref={proofInputRef}
+                id="proofPhoto"
+                type="file"
+                accept="image/*"
+                onChange={(event) => setProofFile(event.target.files?.[0] ?? null)}
+              />
+              {uploadedProofUrl ? (
+                <p className="break-all text-xs text-muted-foreground">{uploadedProofUrl}</p>
+              ) : null}
             </div>
             <div className="flex gap-3">
               <Button type="button" onClick={updateComplaint}>
                 Save changes
               </Button>
-              <Button type="button" variant="outline" onClick={() => setSelectedComplaintId(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSelectedComplaintId(null);
+                  setProofFile(null);
+                  setUploadedProofUrl("");
+                  setNote("");
+                  setHistory([]);
+                  if (proofInputRef.current) {
+                    proofInputRef.current.value = "";
+                  }
+                }}
+              >
                 Cancel
               </Button>
             </div>
@@ -283,12 +347,23 @@ export function AdminComplaintsClient({ complaints }: Props) {
                   {history.map((entry) => (
                     <div key={entry.id} className="rounded-lg border px-4 py-3 text-sm">
                       <div className="font-medium">
-                        {entry.previousStatus ?? "Created"} -> {entry.newStatus}
+                        {entry.previousStatus ?? "Created"} {"->"} {entry.newStatus}
                       </div>
                       <div className="text-muted-foreground">
                         By {entry.actorName} on {new Date(entry.timestamp).toLocaleString()}
                       </div>
                       {entry.note ? <div className="mt-1">{entry.note}</div> : null}
+                      {entry.proofPhotoUrl ? (
+                        <div className="mt-3">
+                          <Image
+                            src={entry.proofPhotoUrl}
+                            alt="Resolution proof"
+                            width={720}
+                            height={480}
+                            className="h-auto max-h-48 rounded-lg border object-cover"
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>

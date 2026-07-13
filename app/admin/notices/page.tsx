@@ -30,6 +30,16 @@ export default async function AdminNoticesPage() {
                 <div>
                   <h3 className="font-semibold">{notice.title}</h3>
                   <p className="text-sm text-muted-foreground">{notice.description}</p>
+                  {notice.pdfUrl ? (
+                    <a
+                      href={notice.pdfUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block text-sm font-medium underline underline-offset-4"
+                    >
+                      Open PDF attachment
+                    </a>
+                  ) : null}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {notice.isPinned ? "Pinned" : ""} {notice.isImportant ? "Important" : ""}

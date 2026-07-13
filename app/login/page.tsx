@@ -42,7 +42,19 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(result?.url ?? "/resident/dashboard");
+    const sessionResponse = await fetch("/api/auth/session");
+    const session = (await sessionResponse.json()) as {
+      user?: { role?: "RESIDENT" | "ADMIN" };
+    };
+    const fallbackDestination =
+      session.user?.role === "ADMIN" ? "/admin/dashboard" : "/resident/dashboard";
+    const callbackUrl = searchParams.get("callbackUrl");
+    const destination =
+      session.user?.role === "ADMIN" && callbackUrl?.startsWith("/resident")
+        ? "/admin/dashboard"
+        : callbackUrl ?? fallbackDestination;
+
+    router.push(destination);
     router.refresh();
   });
 

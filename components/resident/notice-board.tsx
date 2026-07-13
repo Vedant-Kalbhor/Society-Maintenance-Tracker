@@ -1,4 +1,5 @@
 import { Notice } from "@prisma/client";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,11 +34,21 @@ export function NoticeBoard({ notices }: NoticeBoardProps) {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                {notice.description}
-              </p>
-            </CardContent>
-          </Card>
+                <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                  {notice.description}
+                </p>
+                {notice.pdfUrl ? (
+                  <Link
+                    href={notice.pdfUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-block text-sm font-medium underline underline-offset-4"
+                  >
+                    Download attached PDF
+                  </Link>
+                ) : null}
+              </CardContent>
+            </Card>
         ))
       )}
     </div>

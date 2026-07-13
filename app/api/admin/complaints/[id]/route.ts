@@ -15,15 +15,22 @@ const complaintAdminUpdateSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().trim().max(1000).optional()
   ),
+  proofPhotoUrl: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().url().optional()
+  ),
 });
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== Role.ADMIN) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
   const body = await request.json().catch(() => null);
   const parsed = complaintAdminUpdateSchema.safeParse(body);
   if (!parsed.success) {
@@ -51,6 +58,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   });
 
   const { status, priority, note } = parsed.data;
+  const proofPhotoUrl = parsed.data.proofPhotoUrl ?? null;
 
   const updateData: {
     status?: ComplaintStatus;
@@ -95,6 +103,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         actorId: session.user.id,
         actorName: session.user.name ?? session.user.email ?? "Admin",
         note,
+        proofPhotoUrl,
         tx,
       });
     }
@@ -123,13 +132,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   return NextResponse.json({ complaint: updatedComplaint });
 }
 
-export async function GET(_request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const session = await auth();
   if (!session?.user?.id || session.user.role !== Role.ADMIN) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const { id } = params;
+  const { id } = await params;
   const complaint = await prisma.complaint.findUnique({
     where: { id },
     include: {

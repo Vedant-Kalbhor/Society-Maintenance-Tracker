@@ -38,24 +38,7 @@ export default function HomePage() {
         </div>
 
         <Card className="w-full max-w-xl border-border/70 bg-card/90 backdrop-blur">
-          <CardHeader>
-            <CardTitle>Phase 1 foundation</CardTitle>
-            <CardDescription>
-              The app shell is ready for authentication, dashboards, uploads, and notifications.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {highlights.map((item) => (
-                <li
-                  key={item}
-                  className="rounded-lg border bg-background/60 px-4 py-3 text-sm text-foreground"
-                >
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
+          
         </Card>
       </section>
     </main>

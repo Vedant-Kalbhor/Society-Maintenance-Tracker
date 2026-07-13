@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session?.user?.id || session.user.role !== Role.RESIDENT) {
+  if (!session?.user?.id || (session.user.role !== Role.RESIDENT && session.user.role !== Role.ADMIN)) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -28,7 +28,10 @@ export async function POST(request: Request) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const result = await uploadImageToCloudinary(buffer, `society-maintenance/complaints/${session.user.id}`);
+  const result = await uploadImageToCloudinary(
+    buffer,
+    `society-maintenance/${session.user.role.toLowerCase()}/${session.user.id}`
+  );
 
   return NextResponse.json({ url: result.url, publicId: result.publicId }, { status: 201 });
 }

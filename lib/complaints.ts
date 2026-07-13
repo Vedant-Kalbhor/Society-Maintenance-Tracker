@@ -48,6 +48,7 @@ export async function createComplaintHistoryEntry(params: {
   actorId: string | null;
   actorName: string;
   note?: string | null;
+  proofPhotoUrl?: string | null;
   tx?: Prisma.TransactionClient;
 }) {
   const client = params.tx ?? prisma;
@@ -60,6 +61,7 @@ export async function createComplaintHistoryEntry(params: {
       actorId: params.actorId,
       actorName: params.actorName,
       note: params.note ?? null,
+      proofPhotoUrl: params.proofPhotoUrl ?? null,
     },
   });
 }

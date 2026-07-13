@@ -8,7 +8,7 @@ It supports two roles:
 - Admin
 
 Residents can register, log in, raise complaints, upload photos, and view notices and their complaint history.
-Admins can review all complaints, filter and search them, update status and priority, manage notices, configure overdue thresholds, and inspect complaint history.
+Admins can review all complaints, filter and search them, resolve complaints with notes and optional proof photos, manage notices, configure overdue thresholds, and inspect complaint history.
 
 ## Tech Stack
 
@@ -37,6 +37,7 @@ Admins can review all complaints, filter and search them, update status and prio
 - Complaint creation and tracking
 - Complaint history audit trail
 - Notice board
+- Broadcast notices
 - Overdue complaint tracking
 - Configurable overdue threshold
 - API routes for full-stack operations
@@ -160,6 +161,7 @@ The seed script creates a sample admin user:
 - `GET /api/admin/complaints/:id`
 - `POST /api/admin/notices`
 - `PATCH /api/admin/config`
+- `POST /api/uploads/photo`
 
 ## Project Structure
 
@@ -173,5 +175,6 @@ The seed script creates a sample admin user:
 
 - Complaint history is append-only.
 - Resolving a complaint automatically closes it.
+- Admins are routed to the admin dashboard and do not use resident complaint pages.
 - Overdue complaints are prioritized in the admin list.
 - The project is structured to support later phases like photo uploads and email notifications.
