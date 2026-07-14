@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { LogoutButton } from "@/components/layout/logout-button";
@@ -7,6 +8,9 @@ import { auth } from "@/lib/auth";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
+  if (!session?.user?.id || session.user.role !== "ADMIN") {
+    redirect("/login");
+  }
 
   return (
     <div className="min-h-screen">
