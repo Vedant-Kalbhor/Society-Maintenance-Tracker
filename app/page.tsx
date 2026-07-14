@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const highlights = [
-  "Resident complaint tracking",
-  "Admin dashboards and filters",
-  "History-aware audit trail",
-  "Cloud-ready architecture",
+  "Raise and track complaints effortlessly",
+  "Never miss important society updates",
+  "Improve response times and accountability",
+  "Create a smoother living experience",
 ];
 
 export default function HomePage() {
