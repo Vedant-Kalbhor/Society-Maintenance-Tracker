@@ -133,10 +133,21 @@ npm run lint
 
 ## Sample Admin Account
 
-The seed script creates a sample admin user:
+The seed script creates a sample admin user in the database pointed to by `DATABASE_URL`:
 
 - Email: `admin@societytracker.local`
 - Password: `Admin@12345`
+
+If you deploy with Neon, make sure you run the seed script against the Neon database too, otherwise the default admin will not exist in production.
+
+Example:
+
+```bash
+# Set DATABASE_URL to your Neon connection string first
+npm run seed
+```
+
+There is no public admin registration flow by design. Admin access should come from the seeded account or from manually creating another admin user in the database.
 
 ## API Routes
 
